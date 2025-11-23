@@ -317,7 +317,7 @@ MIT License - See LICENSE file for details
 
 ## Support
 
-- **Issues**: https://github.com/yourusername/walmagotchi/issues
+- **Issues**: https://github.com/nhatlapross/walmagotchi/issues
 - **Discord**: [Join our community]
 - **Docs**: [Full documentation]
 
