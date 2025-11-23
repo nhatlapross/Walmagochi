@@ -1,0 +1,38 @@
+{
+  "name": "trust-oracle-server",
+  "version": "1.0.0",
+  "description": "Trust Oracle Backend Server - ESP32 Hardware Witness & Sui Blockchain Integration",
+  "main": "src/server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "esp32",
+    "sui",
+    "blockchain",
+    "oracle",
+    "iot",
+    "hardware-witness",
+    "ed25519",
+    "websocket"
+  ],
+  "author": "sui-watch team",
+  "license": "MIT",
+  "dependencies": {
+    "@mysten/sui": "^1.44.0",
+    "better-sqlite3": "^12.4.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.7",
+    "tweetnacl": "^1.0.3",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0"
+  }
+}

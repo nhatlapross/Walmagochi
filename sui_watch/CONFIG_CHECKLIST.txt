@@ -1,0 +1,184 @@
+╔═══════════════════════════════════════════════════════════════╗
+║   ESP32-S3 + GC9A01 LCD 1.28" + LVGL Configuration Checklist  ║
+╚═══════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────┐
+│ 1. ARDUINO IDE BOARD SETTINGS                               │
+└─────────────────────────────────────────────────────────────┘
+  [ ] Board: ESP32S3 Dev Module
+  [ ] PSRAM: QSPI PSRAM  ⚠️ CRITICAL - Must enable!
+  [ ] Flash Size: 8MB (64Mb)
+  [ ] Partition Scheme: 8M with spiffs
+  [ ] Upload Speed: 921600
+  [ ] CPU Frequency: 240MHz
+
+┌─────────────────────────────────────────────────────────────┐
+│ 2. PIN CONNECTIONS                                          │
+└─────────────────────────────────────────────────────────────┘
+  LCD SPI:
+    [ ] DC   → GPIO 8
+    [ ] CS   → GPIO 9
+    [ ] CLK  → GPIO 10
+    [ ] MOSI → GPIO 11
+    [ ] MISO → GPIO 12
+    [ ] RST  → GPIO 14
+    [ ] BL   → GPIO 2
+
+  Touch I2C:
+    [ ] SDA → GPIO 6
+    [ ] SCL → GPIO 7
+    [ ] RST → GPIO 13
+    [ ] INT → GPIO 5
+
+┌─────────────────────────────────────────────────────────────┐
+│ 3. REQUIRED FILES (Copy from working example)              │
+└─────────────────────────────────────────────────────────────┘
+  LCD Driver:
+    [ ] LCD_1in28.cpp
+    [ ] LCD_1in28.h
+    [ ] DEV_Config.cpp
+    [ ] DEV_Config.h
+    [ ] GUI_Paint.cpp
+    [ ] GUI_Paint.h
+    [ ] Debug.h
+
+  Fonts:
+    [ ] fonts.h
+    [ ] font8.cpp
+    [ ] font12.cpp
+    [ ] font16.cpp
+    [ ] font20.cpp
+    [ ] font24.cpp
+
+  Touch:
+    [ ] CST816S.cpp
+    [ ] CST816S.h
+
+  Image:
+    [ ] ImageData.cpp
+    [ ] ImageData.h
+
+┌─────────────────────────────────────────────────────────────┐
+│ 4. CODE FIXES - LCD_1in28.cpp                              │
+└─────────────────────────────────────────────────────────────┘
+  [ ] Line 389: Change (Xend-1)>>8 to (Yend-1)>>8
+      ❌ WRONG: LCD_1IN28_SendData_8Bit((Xend-1)>>8);
+      ✅ RIGHT: LCD_1IN28_SendData_8Bit((Yend-1)>>8);
+
+  [ ] Line 341: Set MADCTL rotation
+      MemoryAccessReg = 0x48;  // MX + BGR (mirror X)
+
+      Alternative values if UI misaligned:
+      • 0x08 = BGR only (no flip)
+      • 0x88 = MY + BGR (mirror Y)
+      • 0xC8 = MX+MY + BGR (mirror both)
+
+┌─────────────────────────────────────────────────────────────┐
+│ 5. CODE IMPLEMENTATION - Main .ino file                    │
+└─────────────────────────────────────────────────────────────┘
+  [ ] Define BlackImage buffer:
+      UWORD *BlackImage = NULL;
+
+  [ ] Initialize PSRAM in setup():
+      psramInit();
+
+  [ ] Allocate BlackImage:
+      BlackImage = (UWORD *)ps_malloc(240 * 240 * 2);
+
+  [ ] my_disp_flush() function:
+      [X] Copy to BlackImage with correct offset
+      [X] Swap bytes: (color >> 8) | (color << 8)
+      [X] Call LCD_1IN28_DisplayWindows(x1, y1, x2+1, y2+1, BlackImage)
+      [X] Note the +1 for x2 and y2!
+
+  [ ] Enable backlight in setup():
+      pinMode(LCD_BL_PIN, OUTPUT);
+      digitalWrite(LCD_BL_PIN, HIGH);
+
+┌─────────────────────────────────────────────────────────────┐
+│ 6. SQUARELINE STUDIO EXPORT SETTINGS                       │
+└─────────────────────────────────────────────────────────────┘
+  Display:
+    [ ] Width: 240
+    [ ] Height: 240
+    [ ] Color depth: 16bit RGB565
+
+  Project Settings:
+    [ ] LVGL version: 8.3.x
+    [ ] LV_COLOR_16_SWAP: 0  ⚠️ Must be 0!
+
+  Export:
+    [ ] Template: Arduino
+    [ ] UI files: Same folder as .ino
+
+  Files generated:
+    [ ] ui.c / ui.h
+    [ ] ui_Screen*.c / ui_Screen*.h
+    [ ] ui_events.c / ui_events.h
+    [ ] ui_helpers.c / ui_helpers.h
+
+┌─────────────────────────────────────────────────────────────┐
+│ 7. INCLUDES IN MAIN .INO                                    │
+└─────────────────────────────────────────────────────────────┘
+  [ ] #include <lvgl.h>
+  [ ] #include "LCD_1in28.h"
+  [ ] #include "DEV_Config.h"
+  [ ] #include "CST816S.h"
+  [ ] #include "ui.h"
+
+  DON'T include:
+  [ ] ❌ #include <TFT_eSPI.h>  // CAUSES CRASH!
+
+┌─────────────────────────────────────────────────────────────┐
+│ 8. VERIFICATION TESTS                                       │
+└─────────────────────────────────────────────────────────────┘
+  After Upload:
+    [ ] Serial Monitor shows "PSRAM initialized"
+    [ ] Serial Monitor shows "LCD initialized"
+    [ ] Serial Monitor shows "UI loaded"
+    [ ] Screen shows color test (RED/GREEN/BLUE/BLACK)
+    [ ] UI appears on screen
+    [ ] UI centered correctly (not shifted)
+    [ ] No black horizontal lines
+    [ ] No tearing/splitting
+    [ ] Text readable (not garbled)
+    [ ] Touch responds (if enabled)
+    [ ] No crashes in loop
+
+┌─────────────────────────────────────────────────────────────┐
+│ 9. COMMON ISSUES & QUICK FIX                               │
+└─────────────────────────────────────────────────────────────┘
+  Black screen:
+    → Check backlight: digitalWrite(2, HIGH)
+
+  Crash on tft.init():
+    → Remove TFT_eSPI, use LCD driver
+
+  Garbled/striped text:
+    → Check byte swap in flush function
+
+  Black horizontal lines:
+    → Use BlackImage buffer + LCD_1IN28_DisplayWindows
+
+  Wrong UI position:
+    → Try different MADCTL values (0x08/0x48/0x88/0xC8)
+
+  "PSRAM not available":
+    → Enable PSRAM in Arduino board settings!
+
+  Missing +1 boundary:
+    → LCD_1IN28_DisplayWindows needs x2+1, y2+1
+
+┌─────────────────────────────────────────────────────────────┐
+│ 10. MEMORY REQUIREMENTS                                     │
+└─────────────────────────────────────────────────────────────┘
+  [ ] PSRAM: 115,200 bytes (BlackImage: 240x240x2)
+  [ ] SRAM: ~90KB (LVGL + buffers)
+  [ ] Flash: ~570KB (program)
+
+╔═══════════════════════════════════════════════════════════════╗
+║ ✓ ALL CHECKS PASSED = READY TO UPLOAD!                       ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Last verified: 2025-10-31
+Configuration status: ✅ WORKING
